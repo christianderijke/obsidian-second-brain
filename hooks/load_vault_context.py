@@ -165,10 +165,66 @@ def precedence_section(claude_md: Path) -> str:
     return vault_plugin_scan.precedence_block(detected, claude_md)
 
 
+# Dead-man-check: de curator (Mac Mini) appendt na elke run een shell-heartbeat
+# aan log.md in de vorm "## [YYYY-MM-DD] <naam>-run | ...". log.md synct via
+# OneDrive, dus deze check werkt op elke machine - bewust NIET gebaseerd op
+# ~/Library/Logs, die map bestaat alleen op de Mini.
+HEARTBEAT_RE = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] [\w-]*-run \|", re.MULTILINE)
+HEARTBEAT_MAX_AGE_HOURS = 36
+
+
+def curator_deadman_warning(vault: Path) -> str:
+    """Return a warning line when the newest curator heartbeat in log.md is
+    older than HEARTBEAT_MAX_AGE_HOURS (or missing); empty string otherwise.
+
+    Heartbeat lines carry only a date, so age is measured from 00:00 of that
+    date. The morning run fires daily at 08:00, so a healthy curator always
+    has a same-day heartbeat; the 36h threshold therefore only trips when at
+    least one full daily run is missing.
+    """
+    try:
+        text = (vault / "log.md").read_text(encoding="utf-8")
+    except OSError:
+        text = ""
+
+    dates = []
+    for m in HEARTBEAT_RE.finditer(text):
+        try:
+            dates.append(datetime.date.fromisoformat(m.group(1)))
+        except ValueError:
+            continue
+
+    advice = (
+        "Meld dit aan Christian en check op de Mac Mini: "
+        "`~/Library/Logs/obsidian-agents/` en `launchctl list | grep obsidian`. "
+        "Zie [[Knowledge/Vault Maintenance Setup]].\n\n"
+    )
+    if not dates:
+        return (
+            "⚠️ **CURATOR DEAD-MAN-CHECK**: er staat nog geen enkele "
+            "'-run |'-heartbeat van de curator in log.md. "
+        ) + advice
+
+    newest = max(dates)
+    age = datetime.datetime.now() - datetime.datetime.combine(newest, datetime.time.min)
+    if age.total_seconds() > HEARTBEAT_MAX_AGE_HOURS * 3600:
+        return (
+            f"⚠️ **CURATOR DEAD-MAN-CHECK**: curator heeft sinds {newest} geen "
+            f"heartbeat geschreven in log.md (drempel {HEARTBEAT_MAX_AGE_HOURS} uur). "
+        ) + advice
+    return ""
+
+
 def main() -> int:
     sections = [skill_root_block()]
     claude_md = vault_manual_path()
     if claude_md is not None:
+        try:
+            warning = curator_deadman_warning(claude_md.parent)
+        except Exception:
+            warning = ""  # de dead-man-check mag het laden van context nooit breken
+        if warning:
+            sections.append(warning)
         # Characters, not bytes: the cap counts characters and a CJK manual runs
         # about three bytes to each one, so st_size would reject manuals that fit.
         text = claude_md.read_text(encoding="utf-8-sig")
