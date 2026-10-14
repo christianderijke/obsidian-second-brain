@@ -107,7 +107,7 @@ See `references/vault-schema.md` for full structural details.
 ## Core Operating Principles
 
 ### AI-first vault rule (applies to every note)
-The vault is designed for **future agent** to read and reason over, not for human review. Every note Claude writes - across all 47 commands - must follow `references/ai-first-rules.md`:
+The vault is designed for **future agent** to read and reason over, not for human review. Every note Claude writes - across all 48 commands - must follow `references/ai-first-rules.md`:
 
 1. **Self-contained context** - each note explains itself; don't rely on backlinks alone
 2. **"For future agent" preamble** - 2-3 sentence summary so any compatible agent can decide relevance in 10 seconds
@@ -590,6 +590,10 @@ Steps:
 8. Append an operation-log entry with severity counts - if `Logs/` exists write the entry to `Logs/YYYY-MM-DD.md`, otherwise append to `log.md` (SKILL.md's own rule: the root `log.md` is a pointer file in v0.9+ vaults, never an entry target)
 
 ---
+
+### `/vaultdb`
+
+**Regenerates `vault-status.html` in the vault root: a self-contained status page that answers "does the whole vault process still work, and what remains to be done?"** Gathers fresh heartbeats from `log.md` of every vault the user routes to, compares them with the trigger tables in the setup notes, runs live checks on the current machine (launchd, env, staging, open ADRs, openspec tasks), assigns OK / Storing / Gat / In aanbouw / Check per writer, and rewrites the page with verdict tiles, writer tables, an 8-day run matrix, a prioritized to-do list and known failure classes. Static snapshot; this command is the refresh mechanism.
 
 ### `/obsidian-reindex`
 
