@@ -40,6 +40,7 @@ so the vault match works regardless of which form the harness or env var uses.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import os
 import re
